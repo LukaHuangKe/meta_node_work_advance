@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ethers.js + MetaMask 演示</title>
+  <!-- 使用多个 CDN 源，确保能加载 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.16.0/dist/ethers.umd.min.js"></script>
+  <script>
+    // 如果第一个 CDN 失败，尝试备用 CDN
+    if (typeof ethers === 'undefined') {
+      document.write('<script src="https://unpkg.com/ethers@6.16.0/dist/ethers.umd.min.js"><\/script>');
+    }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+      padding: 25px;
+      background: #f8f9fa;
+      border-radius: 15px;
+      border: 1px solid #e9ecef;
+    }
+
+    .section h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section h2::before {
+      content: "▸";
+      color: #764ba2;
+    }
+
+    .connect-section {
+      text-align: center;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+
+    #connectBtn {
+      padding: 15px 40px;
+      font-size: 18px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #f6851b 0%, #e2761b 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      display: inline-block;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(246, 133, 27, 0.4);
+      min-width: 200px;
+    }
+
+    #connectBtn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(246, 133, 27, 0.6);
+      background: linear-gradient(135deg, #e2761b 0%, #d66a0f 100%);
+    }
+
+    #connectBtn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    #connectBtn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #accountInfo {
+      margin-top: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      display: none;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    #accountInfo.connected {
+      display: block;
+      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+      color: #155724;
+      font-weight: 600;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #6c757d;
+    }
+
+    .info-value {
+      font-family: 'Courier New', monospace;
+      color: #667eea;
+      word-break: break-all;
+      text-align: right;
+      max-width: 60%;
+    }
+
+    .value-display {
+      font-size: 2em;
+      font-weight: 700;
+      color: #667eea;
+      text-align: center;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      margin: 15px 0;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      transition: border-color 0.3s ease;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    #eventLog {
+      max-height: 400px;
+      overflow-y: auto;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    #eventLog::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #eventLog::-webkit-scrollbar-track {
+      background: #2d2d2d;
+      border-radius: 4px;
+    }
+
+    #eventLog::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 4px;
+    }
+
+    #eventLog::-webkit-scrollbar-thumb:hover {
+      background: #764ba2;
+    }
+
+    .log-entry {
+      margin-bottom: 10px;
+      padding: 8px;
+      background: rgba(102, 126, 234, 0.1);
+      border-left: 3px solid #667eea;
+      border-radius: 4px;
+    }
+
+    .log-time {
+      color: #888;
+      margin-right: 10px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+
+    .status-connected {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .loading {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🦊 Ethers.js + MetaMask 演示</h1>
+      <p>智能合约交互界面</p>
+    </div>
+
+    <div class="content">
+      <!-- 重要提示 -->
+      <div id="fileProtocolWarning" style="display: none; background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="color: #856404; margin-bottom: 10px;">重要提示</h3>
+        <p style="color: #856404; margin-bottom: 10px;">
+          检测到您正在使用 <code>file://</code> 协议打开页面。MetaMask 无法在 <code>file://</code> 协议下工作！
+        </p>
+        <p style="color: #856404; margin-bottom: 15px;">
+          <strong>请使用本地服务器运行：</strong>
+        </p>
+        <div style="background: white; padding: 15px; border-radius: 5px; font-family: monospace; margin-bottom: 10px;">
+          <div style="margin-bottom: 5px;"><strong>方法1（推荐）：</strong></div>
+          <div style="color: #28a745;">cd /Users/xxxxx/Documents/mateNode学院/hardhat3学习/hardhat3-demo</div>
+          <div style="color: #28a745;">python3 -m http.server 8080</div>
+          <div style="margin-top: 10px; margin-bottom: 5px;"><strong>然后访问：</strong></div>
+          <div style="color: #007bff;">http://localhost:8080/demo.html</div>
+        </div>
+        <div style="background: white; padding: 15px; border-radius: 5px; font-family: monospace;">
+          <div style="margin-bottom: 5px;"><strong>方法2：</strong></div>
+          <div style="color: #28a745;">npx http-server -p 8080</div>
+        </div>
+      </div>
+      
+      <!-- 连接 MetaMask 区域 -->
+      <div class="section connect-section">
+        <h2>钱包连接</h2>
+        <button id="connectBtn">连接MetaMask</button>
+        <div id="accountInfo"></div>
+      </div>
+
+      <!-- 合约信息区域 -->
+      <div class="section">
+        <h2>合约信息</h2>
+        <div class="info-row">
+          <span class="info-label">合约地址:</span>
+          <div style="flex: 1; display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="contractAddressInput" 
+                   value="0x5FbDB2315678afecb367f032d93F642f64180aa3" 
+                   style="flex: 1; padding: 8px; border: 2px solid #e9ecef; border-radius: 5px; font-family: monospace; font-size: 0.9em;"
+                   placeholder="输入合约地址或留空自动部署">
+            <button id="verifyContractBtn" class="btn" style="padding: 8px 16px; min-width: auto;">验证</button>
+            <button id="deployContractBtn" class="btn" style="padding: 8px 16px; min-width: auto; background: #28a745; color: white;">部署</button>
+          </div>
+        </div>
+        <div class="info-row">
+          <span class="info-label">合约状态:</span>
+          <span class="info-value" id="contractStatus">未验证</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">网络状态:</span>
+          <span class="info-value" id="networkStatus">未连接</span>
+        </div>
+      </div>
+
+      <!-- 合约交互区域 -->
+      <div class="section">
+        <h2>合约交互</h2>
+        <div class="value-display">
+          <div style="font-size: 0.5em; color: #6c757d; margin-bottom: 10px;">当前值</div>
+          <div id="currentValue">-</div>
+        </div>
+        
+        <div class="button-group">
+          <button id="incrementBtn" class="btn btn-primary">Increment</button>
+          <button id="setNumberBtn" class="btn btn-secondary">Set Number</button>
+        </div>
+        
+        <div class="input-group">
+          <input type="number" id="numberInput" placeholder="输入要设置的数字" value="100">
+        </div>
+      </div>
+
+      <!-- 事件日志区域 -->
+      <div class="section">
+        <h2>事件日志</h2>
+        <div id="eventLog"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 完整的 CounterDemo ABI
+    const counterAbi = [
+      {
+        "anonymous": false,
+        "inputs": [
+          {"indexed": true, "internalType": "address", "name": "user", "type": "address"},
+          {"indexed": false, "internalType": "uint256", "name": "newValue", "type": "uint256"}
+        ],
+        "name": "Incremented",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {"indexed": true, "internalType": "address", "name": "user", "type": "address"},
+          {"indexed": false, "internalType": "uint256", "name": "newValue", "type": "uint256"}
+        ],
+        "name": "SetNumber",
+        "type": "event"
+      },
+      {
+        "inputs": [],
+        "name": "getNumber",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "increment",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "number",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{"internalType": "uint256", "name": "newNumber", "type": "uint256"}],
+        "name": "setNumber",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
+    
+    // 合约字节码（用于部署）
+    // const contractBytecode = "0x6080604052348015600e575f5ffd5b506102af8061001c5f395ff3fe608060405234801561000f575f5ffd5b506004361061004a575f3560e01c80633fb5c1cb1461004e5780638381f58a1461006a578063d09de08a14610088578063f2c9ecd814610092575b5f5ffd5b610068600480360381019061006391906101b2565b6100b0565b005b610072610107565b60405161007f91906101ec565b60405180910390f35b61009061010c565b005b61009a610173565b6040516100a791906101ec565b60405180910390f35b805f819055503373ffffffffffffffffffffffffffffffffffffffff167f73f2f3581b2f837eb0a0b85fe0e886ca0b8bb70de4750678139d3608f54098b1826040516100fc91906101ec565b60405180910390a250565b5f5481565b5f5f81548092919061011d90610232565b91905055503373ffffffffffffffffffffffffffffffffffffffff167f38ac789ed44572701765277c4d0970f2db1c1a571ed39e84358095ae4eaa54205f5460405161016991906101ec565b60405180910390a2565b5f5f54905090565b5f5ffd5b5f819050919050565b6101918161017f565b811461019b575f5ffd5b50565b5f813590506101ac81610188565b92915050565b5f602082840312156101c7576101c661017b565b5b5f6101d48482850161019e565b91505092915050565b6101e68161017f565b82525050565b5f6020820190506101ff5f8301846101dd565b92915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f61023c8261017f565b91507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff820361026e5761026d610205565b5b60018201905091905056fea2646970667358221220efbb38ba8ffca59e37211b025483f8a923a03e59d0a3f0faded727d79daa9d4364736f6c634300081c0033";
+    // 是artifacts/CounterDemo.sol/CounterDemo.json中的bytecode，不同sol版本等编译出来结果可能不同
+    const contractBytecode = "0x6080604052348015600e575f5ffd5b506102af8061001c5f395ff3fe608060405234801561000f575f5ffd5b506004361061004a575f3560e01c80633fb5c1cb1461004e5780638381f58a1461006a578063d09de08a14610088578063f2c9ecd814610092575b5f5ffd5b610068600480360381019061006391906101b2565b6100b0565b005b610072610107565b60405161007f91906101ec565b60405180910390f35b61009061010c565b005b61009a610173565b6040516100a791906101ec565b60405180910390f35b805f819055503373ffffffffffffffffffffffffffffffffffffffff167f73f2f3581b2f837eb0a0b85fe0e886ca0b8bb70de4750678139d3608f54098b1826040516100fc91906101ec565b60405180910390a250565b5f5481565b5f5f81548092919061011d90610232565b91905055503373ffffffffffffffffffffffffffffffffffffffff167f38ac789ed44572701765277c4d0970f2db1c1a571ed39e84358095ae4eaa54205f5460405161016991906101ec565b60405180910390a2565b5f5f54905090565b5f5ffd5b5f819050919050565b6101918161017f565b811461019b575f5ffd5b50565b5f813590506101ac81610188565b92915050565b5f602082840312156101c7576101c661017b565b5b5f6101d48482850161019e565b91505092915050565b6101e68161017f565b82525050565b5f6020820190506101ff5f8301846101dd565b92915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f61023c8261017f565b91507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff820361026e5761026d610205565b5b60018201905091905056fea26469706673582212204fe0894081db94c8a0bd8464b4c5483b5fe891c4185c175c3bd9249daaca52f764736f6c634300081c0033";
+    
+    let provider, signer, contract, account;
+    let currentContractAddress = '';
+    
+    // 检测MetaMask是否可用
+    function isMetaMaskInstalled() {
+      // 检查 window.ethereum 是否存在
+      if (typeof window.ethereum === 'undefined') {
+        console.log('window.ethereum 未定义');
+        return false;
+      }
+      
+      console.log('window.ethereum 存在:', window.ethereum);
+      console.log('window.ethereum.isMetaMask:', window.ethereum.isMetaMask);
+      console.log('window.ethereum.providers:', window.ethereum.providers);
+      
+      // 检查是否是 MetaMask
+      if (window.ethereum.isMetaMask) {
+        console.log('检测到 MetaMask (isMetaMask = true)');
+        return true;
+      }
+      
+      // 检查 providers 数组中是否有 MetaMask
+      if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+        const hasMetaMask = window.ethereum.providers.some(p => p.isMetaMask);
+        console.log('providers 中是否有 MetaMask:', hasMetaMask);
+        if (hasMetaMask) return true;
+      }
+      
+      // 如果只有 window.ethereum，也认为可能是 MetaMask（兼容性处理）
+      // 但需要进一步验证
+      console.log('使用兼容性检测，假设是 MetaMask');
+      return true;
+    }
+    
+    // 获取MetaMask provider
+    function getMetaMaskProvider() {
+      if (!window.ethereum) {
+        return null;
+      }
+      
+      // 如果有多个 providers，找 MetaMask
+      if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+        return window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum;
+      }
+      
+      return window.ethereum;
+    }
+    
+    // 初始化
+    function init() {
+      const connectBtn = document.getElementById('connectBtn');
+      const fileProtocolWarning = document.getElementById('fileProtocolWarning');
+      
+      // 检查是否通过 file:// 协议访问
+      if (window.location.protocol === 'file:') {
+        // 显示警告
+        fileProtocolWarning.style.display = 'block';
+        addLog('检测到 file:// 协议，MetaMask 无法工作！', 'error');
+        addLog('必须使用 HTTP 服务器运行（localhost）', 'error');
+        connectBtn.disabled = true;
+        connectBtn.textContent = '请使用本地服务器运行';
+        connectBtn.style.background = '#dc3545';
+        return; // 直接返回，不继续检测
+      }
+      
+      // 多次尝试检测，因为 MetaMask 注入可能需要时间
+      let attempts = 0;
+      const maxAttempts = 20; // 增加尝试次数
+      
+      function tryDetect() {
+        attempts++;
+        
+        // 详细日志
+        console.log(`尝试检测 MetaMask (第 ${attempts} 次)...`);
+        console.log('window.ethereum:', window.ethereum);
+        console.log('typeof window.ethereum:', typeof window.ethereum);
+        
+        if (isMetaMaskInstalled()) {
+          console.log('MetaMask 已检测到 (尝试 ' + attempts + ' 次)');
+          addLog('MetaMask 已检测到', 'success');
+          connectBtn.textContent = '🦊 连接MetaMask';
+          connectBtn.disabled = false;
+          
+          // 移除旧的事件监听器
+          const newBtn = connectBtn.cloneNode(true);
+          connectBtn.parentNode.replaceChild(newBtn, connectBtn);
+          
+          // 添加新的事件监听器
+          document.getElementById('connectBtn').addEventListener('click', connectMetaMask);
+          
+          // 检查是否已经连接
+          checkConnection();
+          
+          // 更新网络状态
+          updateNetworkStatus();
+        } else if (attempts < maxAttempts) {
+          // 继续尝试
+          setTimeout(tryDetect, 300);
+        } else {
+          // 最终检测失败
+          console.log('MetaMask 未检测到 (已尝试 ' + maxAttempts + ' 次)');
+          console.log('window.ethereum:', typeof window.ethereum);
+          addLog('X MetaMask 未检测到，请确保：', 'error');
+          addLog('1. MetaMask 扩展已安装并启用', 'info');
+          addLog('2. 刷新页面或重启浏览器', 'info');
+          addLog('3. 使用本地服务器运行（不要直接用 file:// 打开）', 'info');
+          
+          connectBtn.textContent = '🦊 安装MetaMask';
+          connectBtn.disabled = false;
+          connectBtn.addEventListener('click', () => {
+            window.open('https://metamask.io/download/', '_blank');
+          });
+        }
+      }
+      
+      // 延迟初始化，等待页面完全加载
+      setTimeout(() => {
+        tryDetect();
+      }, 500);
+      
+      // 也监听 ethereum 注入事件
+      window.addEventListener('ethereum#initialized', () => {
+        console.log('MetaMask 已注入 (通过事件)');
+        addLog('检测到 MetaMask 注入事件', 'success');
+        tryDetect();
+      }, { once: true });
+      
+      // 监听 window.ethereum 的变化
+      let ethereumCheckInterval = setInterval(() => {
+        if (typeof window.ethereum !== 'undefined') {
+          console.log('检测到 window.ethereum 出现');
+          clearInterval(ethereumCheckInterval);
+          tryDetect();
+        }
+      }, 500);
+      
+      // 10秒后停止检查
+      setTimeout(() => {
+        clearInterval(ethereumCheckInterval);
+      }, 10000);
+    }
+    
+    // 更新网络状态
+    async function updateNetworkStatus() {
+      if (!isMetaMaskInstalled()) {
+        document.getElementById('networkStatus').textContent = '未连接';
+        return;
+      }
+      
+      try {
+        const ethereum = getMetaMaskProvider();
+        if (!ethereum) {
+          document.getElementById('networkStatus').textContent = '未连接';
+          return;
+        }
+        
+        const chainId = await ethereum.request({ method: 'eth_chainId' });
+        const networkId = parseInt(chainId, 16);
+        
+        let networkName = 'Unknown';
+        if (networkId === 1) networkName = 'Ethereum Mainnet';
+        else if (networkId === 5) networkName = 'Goerli';
+        else if (networkId === 11155111) networkName = 'Sepolia';
+        else if (networkId === 31337) networkName = 'Hardhat Local';
+        else networkName = `Chain ID: ${networkId}`;
+        
+        document.getElementById('networkStatus').textContent = networkName;
+      } catch (error) {
+        console.error('获取网络状态失败:', error);
+        document.getElementById('networkStatus').textContent = '获取失败';
+      }
+    }
+    
+    // 检查是否已经连接
+    async function checkConnection() {
+      if (!isMetaMaskInstalled()) return;
+      
+      try {
+        const ethereum = getMetaMaskProvider();
+        if (!ethereum) return;
+        
+        const accounts = await ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          // 已经连接，自动连接
+          console.log('检测到已连接的账户，自动连接...');
+          await connectMetaMask();
+        }
+      } catch (error) {
+        console.log('检查连接状态失败:', error);
+      }
+    }
+    
+    // 连接MetaMask
+    async function connectMetaMask() {
+      const connectBtn = document.getElementById('connectBtn');
+      const accountInfo = document.getElementById('accountInfo');
+      
+      // 再次检测 MetaMask
+      if (!isMetaMaskInstalled()) {
+        alert('未检测到 MetaMask，请确保已安装并启用扩展程序');
+        window.open('https://metamask.io/download/', '_blank');
+        return;
+      }
+      
+      const ethereum = getMetaMaskProvider();
+      if (!ethereum) {
+        alert('无法获取 MetaMask provider');
+        return;
+      }
+      
+      try {
+        connectBtn.textContent = '连接中...';
+        connectBtn.disabled = true;
+        connectBtn.classList.add('loading');
+        
+        // 请求账户访问权限（这会弹出MetaMask弹窗）
+        await ethereum.request({ method: 'eth_requestAccounts' });
+        
+        provider = new ethers.BrowserProvider(ethereum);
+        signer = await provider.getSigner();
+        account = await signer.getAddress();
+        
+        // 显示账户信息
+        accountInfo.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>已连接账户</span>
+            <span class="status-badge status-connected">已连接</span>
+          </div>
+          <div style="margin-top: 10px; font-family: 'Courier New', monospace; font-size: 0.9em; word-break: break-all;">
+            ${account}
+          </div>
+        `;
+        accountInfo.classList.add('connected');
+        accountInfo.style.display = 'block';
+        
+        connectBtn.textContent = '已连接';
+        connectBtn.disabled = true;
+        connectBtn.classList.remove('loading');
+        
+        // 获取合约地址并创建合约实例
+        await loadContract();
+        
+        // 更新网络状态
+        await updateNetworkStatus();
+        
+        addLog('MetaMask 连接成功', 'success');
+        
+      } catch (error) {
+        connectBtn.textContent = '🦊 连接MetaMask';
+        connectBtn.disabled = false;
+        connectBtn.classList.remove('loading');
+        
+        if (error.code === 4001) {
+          addLog('X 用户拒绝连接', 'error');
+          alert('您拒绝了连接请求');
+        } else {
+          console.error('连接失败:', error);
+          addLog('X 连接失败: ' + error.message, 'error');
+          alert('连接失败: ' + error.message);
+        }
+      }
+    }
+    
+    // 更新当前值
+    async function updateValue() {
+      if (!contract) return;
+      try {
+        const value = await contract.getNumber();
+        document.getElementById('currentValue').textContent = value.toString();
+      } catch (error) {
+        console.error('读取值失败:', error);
+        addLog('X 读取值失败: ' + error.message, 'error');
+        document.getElementById('currentValue').textContent = '错误';
+      }
+    }
+    
+    // Increment按钮
+    document.getElementById('incrementBtn').addEventListener('click', async () => {
+      if (!contract) {
+        alert('请先连接MetaMask');
+        return;
+      }
+      
+      const btn = document.getElementById('incrementBtn');
+      btn.disabled = true;
+      btn.textContent = '处理中...';
+      
+      try {
+        const tx = await contract.increment();
+        addLog(`交易已发送: ${tx.hash}`, 'info');
+        const receipt = await tx.wait();
+        if (receipt) {
+          addLog(`交易确认，区块号: ${receipt.blockNumber}`, 'success');
+        }
+        await updateValue();
+      } catch (error) {
+        if (error.code === 4001) {
+          addLog('X 用户拒绝交易', 'error');
+        } else {
+          addLog('X 交易失败: ' + error.message, 'error');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Increment';
+      }
+    });
+    
+    // Set Number按钮
+    document.getElementById('setNumberBtn').addEventListener('click', async () => {
+      if (!contract) {
+        alert('请先连接MetaMask');
+        return;
+      }
+      
+      const number = document.getElementById('numberInput').value;
+      if (!number) {
+        alert('请输入数字');
+        return;
+      }
+      
+      const btn = document.getElementById('setNumberBtn');
+      btn.disabled = true;
+      btn.textContent = '处理中...';
+      
+      try {
+        const tx = await contract.setNumber(number);
+        addLog(`交易已发送: ${tx.hash}`, 'info');
+        const receipt = await tx.wait();
+        if (receipt) {
+          addLog(`交易确认，区块号: ${receipt.blockNumber}`, 'success');
+        }
+        await updateValue();
+      } catch (error) {
+        if (error.code === 4001) {
+          addLog('X 用户拒绝交易', 'error');
+        } else {
+          addLog('X 交易失败: ' + error.message, 'error');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Set Number';
+      }
+    });
+    
+    // 设置事件监听
+    function setupEventListeners() {
+      if (!contract) return;
+      
+      contract.on('Incremented', (user, newValue, event) => {
+        addLog(`Incremented事件: 用户 ${user} 新值 ${newValue.toString()}`, 'event');
+      });
+      
+      contract.on('SetNumber', (user, newValue, event) => {
+        addLog(`SetNumber事件: 用户 ${user} 新值 ${newValue.toString()}`, 'event');
+      });
+    }
+    
+    // 添加日志
+    function addLog(message, type = 'info') {
+      const log = document.getElementById('eventLog');
+      const time = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      
+      let color = '#d4d4d4';
+      if (type === 'success') color = '#4caf50';
+      else if (type === 'error') color = '#f44336';
+      else if (type === 'event') color = '#ff9800';
+      else if (type === 'info') color = '#2196f3';
+      
+      logEntry.innerHTML = `<span class="log-time">[${time}]</span><span style="color: ${color}">${message}</span>`;
+      log.appendChild(logEntry);
+      log.scrollTop = log.scrollHeight;
+    }
+    
+    // 监听账户变化（延迟设置，等待 ethereum 注入）
+    function setupEthereumListeners() {
+      if (typeof window.ethereum === 'undefined') {
+        // 如果还没注入，延迟再试
+        setTimeout(setupEthereumListeners, 500);
+        return;
+      }
+      
+      const ethereum = getMetaMaskProvider();
+      if (!ethereum) return;
+      
+      ethereum.on('accountsChanged', (accounts) => {
+        if (accounts.length === 0) {
+          addLog('账户已断开', 'error');
+          location.reload();
+        } else {
+          addLog('账户已切换', 'info');
+          location.reload();
+        }
+      });
+      
+      ethereum.on('chainChanged', () => {
+        addLog('网络已切换', 'info');
+        location.reload();
+      });
+    }
+    
+    setupEthereumListeners();
+    
+    // 页面加载时初始化
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+    
+    // 添加欢迎日志
+    addLog('应用已启动，等待连接 MetaMask...', 'info');
+    
+    // 验证合约
+    async function verifyContract(address) {
+      if (!provider || !address) {
+        document.getElementById('contractStatus').textContent = '未验证';
+        return false;
+      }
+      
+      try {
+        document.getElementById('contractStatus').textContent = '验证中...';
+        
+        // 检查地址是否有代码
+        const code = await provider.getCode(address);
+        if (code === '0x' || code === '0x0') {
+          document.getElementById('contractStatus').textContent = '地址无合约';
+          addLog('X 合约地址不存在或未部署', 'error');
+          return false;
+        }
+        
+        // 尝试创建合约实例并调用方法
+        const testContract = new ethers.Contract(address, counterAbi, provider);
+        const value = await testContract.getNumber();
+        
+        document.getElementById('contractStatus').textContent = '已验证';
+        document.getElementById('contractStatus').style.color = '#28a745';
+        addLog(`合约验证成功，当前值: ${value.toString()}`, 'success');
+        return true;
+      } catch (error) {
+        document.getElementById('contractStatus').textContent = 'X 验证失败';
+        document.getElementById('contractStatus').style.color = '#dc3545';
+        addLog('X 合约验证失败: ' + error.message, 'error');
+        return false;
+      }
+    }
+    
+    // 部署合约
+    async function deployContract() {
+      if (!signer) {
+        alert('请先连接 MetaMask');
+        return;
+      }
+      
+      const deployBtn = document.getElementById('deployContractBtn');
+      const addressInput = document.getElementById('contractAddressInput');
+      
+      try {
+        deployBtn.disabled = true;
+        deployBtn.textContent = '部署中...';
+        
+        addLog('开始部署合约...', 'info');
+        
+        // 使用 ContractFactory 部署
+        const factory = new ethers.ContractFactory(counterAbi, contractBytecode, signer);
+        const deployedContract = await factory.deploy();
+        await deployedContract.waitForDeployment();
+        
+        const address = await deployedContract.getAddress();
+        addressInput.value = address;
+        currentContractAddress = address;
+        
+        addLog(`合约部署成功，地址: ${address}`, 'success');
+        
+        // 创建合约实例
+        contract = deployedContract;
+        
+        // 读取初始值
+        await updateValue();
+        
+        // 设置事件监听
+        setupEventListeners();
+        
+        // 验证合约
+        await verifyContract(address);
+        
+      } catch (error) {
+        addLog('X 部署失败: ' + error.message, 'error');
+        alert('部署失败: ' + error.message);
+      } finally {
+        deployBtn.disabled = false;
+        deployBtn.textContent = '部署';
+      }
+    }
+    
+    // 加载合约
+    async function loadContract() {
+      const addressInput = document.getElementById('contractAddressInput');
+      const address = addressInput.value.trim();
+      
+      if (!address) {
+        addLog('合约地址为空，请部署或输入地址', 'error');
+        return;
+      }
+      
+      if (!ethers.isAddress(address)) {
+        addLog('X 无效的合约地址', 'error');
+        document.getElementById('contractStatus').textContent = '地址无效';
+        return;
+      }
+      
+      currentContractAddress = address;
+      
+      try {
+        // 创建合约实例
+        contract = new ethers.Contract(address, counterAbi, signer);
+        
+        // 验证合约
+        const isValid = await verifyContract(address);
+        
+        if (isValid) {
+          // 读取初始值
+          await updateValue();
+          
+          // 设置事件监听
+          setupEventListeners();
+        }
+      } catch (error) {
+        addLog('X 加载合约失败: ' + error.message, 'error');
+      }
+    }
+    
+    // 绑定验证和部署按钮
+    document.getElementById('verifyContractBtn').addEventListener('click', async () => {
+      if (!provider) {
+        alert('请先连接 MetaMask');
+        return;
+      }
+      
+      const address = document.getElementById('contractAddressInput').value.trim();
+      if (!address) {
+        alert('请输入合约地址');
+        return;
+      }
+      
+      await verifyContract(address);
+    });
+    
+    document.getElementById('deployContractBtn').addEventListener('click', deployContract);
+    
+    // 监听地址输入框变化
+    document.getElementById('contractAddressInput').addEventListener('change', async () => {
+      if (contract) {
+        await loadContract();
+      }
+    });
+  </script>
+</body>
+</html>
