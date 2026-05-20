@@ -18,11 +18,16 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.19.19",
     "chai": "^5.3.3",
+    "dotenv": "^16.4.1",
     "ethers": "^6.16.0",
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
     "hardhat": "^3.0.0",
     "mocha": "^11.7.5",
     "typescript": "~5.8.0"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0"
+  }
 }
