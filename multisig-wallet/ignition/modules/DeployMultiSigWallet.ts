@@ -8,6 +8,7 @@ import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
  *
  * 可升级合约没有构造函数，所以直接部署即可。
  */
+// 这个合约在script脚本里被引用了
 const DeployMultiSigWalletModule = buildModule("DeployMultiSigWallet", (m) => {
     // 部署实现合约
     // MultiSigWalletUpgradeable 是可升级合约，没有构造函数，所以不需要传递参数

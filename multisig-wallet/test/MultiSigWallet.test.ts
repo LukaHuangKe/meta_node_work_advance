@@ -2,6 +2,10 @@ import { expect } from "chai";
 import { network } from "hardhat";
 import "@nomicfoundation/hardhat-ethers-chai-matchers";
 
+/**
+ * getLoadFixture 是一个 兼容性包装函数 ，用于在不同插件配置下都能正确获取 loadFixture 。
+ * 如果你的项目配置清晰，可以直接简化为 const { loadFixture } = await network.connect(); 
+ */
 // 在 Hardhat 3.0 中，使用 @nomicfoundation/hardhat-toolbox-mocha-ethers 时
 // loadFixture 应该从 network 对象获取
 async function getLoadFixture() {
@@ -17,7 +21,7 @@ async function getLoadFixture() {
         throw new Error('loadFixture is not available');
     }
     // @ts-ignore
-    return connection.loadFixture;
+    return connection.loadFixture; //Hardhat 测试框架提供的夹具加载方法，用于高效部署合约。是动态传入的
 }
 
 describe("MultiSigWallet", function () {
