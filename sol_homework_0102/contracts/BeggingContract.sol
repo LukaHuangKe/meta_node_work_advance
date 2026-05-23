@@ -26,6 +26,7 @@ contract BeggingContract is Ownable{
     // 如果要给receive()和fallback()调用的话，那就得是publc
     function donate() public payable {
         require(msg.value > 0, "donate value required");
+        require(msg.sender != owner(), "owner can't donate");
         Donater storage donater = donaters[msg.sender];
         donater.amount += msg.value;
         donater.donateCount += 1;
