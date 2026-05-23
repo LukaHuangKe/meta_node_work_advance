@@ -37,7 +37,15 @@ describe("BeggingContract", function () {
         const wallet = await BeggingContract.deploy();
         await wallet.waitForDeployment();
 
-        // 如果下面要用ethers查询余额，那必须在这里返回ethers对象
+        /**
+         * 但如果你在 fixture 内部 调了 network.connect() （provider A），
+         * 在测试体内又调了一次 network.connect() （provider B），
+         * Hardhat 可能会为这两次 connect() 创建 不同的 EDR 实例/上下文 。
+         * - Provider A 的链上：有合约，有交易记录
+         * - Provider B 的链上：是干净的，没有那些交易
+         * 
+         * 因此如果下面要用ethers查询余额，那必须在这里返回ethers对象！
+         */
         return { ethers, wallet, owner1, owner2, owner3};
     }
 
