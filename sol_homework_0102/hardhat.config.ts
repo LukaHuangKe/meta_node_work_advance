@@ -31,8 +31,8 @@ export default defineConfig({
     sepolia: {
       type: "http",
       chainType: "l1",
-      // url: process.env.SEPOLIA_RPC_URL || "",
-      url: configVariable("SEPOLIA_RPC_URL") || "",
+      url: process.env.SEPOLIA_RPC_URL || "",
+      // url: configVariable("SEPOLIA_RPC_URL") || "", // 这样写感觉还是会有问题
       accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
       timeout: 120000, // 120 秒超时
       httpHeaders: {},
